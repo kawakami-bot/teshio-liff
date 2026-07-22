@@ -56,6 +56,7 @@
       background:#f5fbf7;
       color:#555;
       line-height:1.7;
+      overflow-wrap:anywhere;
     ">
       LINEとの連携を確認しています…
     </div>
@@ -67,6 +68,59 @@
 
     const APP_URL =
       "https://script.google.com/macros/s/AKfycbzqfZmHIVDyUFogb2h-kLMVmZlgdAPSEJ5L2f7Oxz8bbAgiI8CYdLpZy6V8iBRRAfOF/exec";
+
+
+    /*
+     * URLから指定された項目を取得します。
+     *
+     * 通常のクエリパラメータと、
+     * LIFFが付けるliff.stateの両方を確認します。
+     */
+    function getUrlParameter(name) {
+
+      const params =
+        new URLSearchParams(window.location.search);
+
+      const directValue =
+        params.get(name);
+
+      if (directValue) {
+        return directValue;
+      }
+
+      const liffState =
+        params.get("liff.state");
+
+      if (!liffState) {
+        return "";
+      }
+
+      try {
+
+        const decodedState =
+          decodeURIComponent(liffState);
+
+        const stateQuery =
+          decodedState.includes("?")
+            ? decodedState.split("?")[1]
+            : decodedState.replace(/^\?/, "");
+
+        const stateParams =
+          new URLSearchParams(stateQuery);
+
+        return stateParams.get(name) || "";
+
+      } catch (error) {
+
+        console.error(
+          "liff.stateの読み取りに失敗しました。",
+          error
+        );
+
+        return "";
+      }
+    }
+
 
     async function startLineLogin() {
 
@@ -103,16 +157,43 @@
         const lineUserId =
           profile.userId;
 
+        const classId =
+          getUrlParameter("classId");
+
         result.innerHTML =
           "<strong style='color:#168342;'>" +
           "LINE連携が完了しました" +
           "</strong><br>" +
-          "教室一覧を表示します…";
+          "教室情報を表示します…";
 
-        const nextUrl =
-          APP_URL +
-          "?page=classList&lineUserId=" +
-          encodeURIComponent(lineUserId);
+        let nextUrl;
+
+        /*
+         * classIdが指定されている場合は、
+         * 該当する教室詳細へ直接移動します。
+         */
+        if (classId) {
+
+          nextUrl =
+            APP_URL +
+            "?page=detail" +
+            "&classId=" +
+            encodeURIComponent(classId) +
+            "&lineUserId=" +
+            encodeURIComponent(lineUserId);
+
+        /*
+         * classIdがない通常起動の場合は、
+         * 教室一覧へ移動します。
+         */
+        } else {
+
+          nextUrl =
+            APP_URL +
+            "?page=classList" +
+            "&lineUserId=" +
+            encodeURIComponent(lineUserId);
+        }
 
         window.location.replace(nextUrl);
 
@@ -127,6 +208,7 @@
           String(error.message || error);
       }
     }
+
 
     startLineLogin();
   </script>
